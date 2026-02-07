@@ -1,0 +1,29 @@
+{
+  "name": "@aptove/xcbridge-darwin-arm64",
+  "version": "0.1.0",
+  "description": "xcbridge binary for macOS Apple Silicon (arm64)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aptove/xcbridge.git"
+  },
+  "homepage": "https://github.com/Aptove/xcbridge#readme",
+  "keywords": [
+    "xcbridge",
+    "xcode",
+    "ios",
+    "macos",
+    "arm64",
+    "apple-silicon"
+  ],
+  "files": [
+    "bin"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "preferUnplugged": true
+}

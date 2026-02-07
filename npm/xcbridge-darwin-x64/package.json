@@ -1,0 +1,29 @@
+{
+  "name": "@aptove/xcbridge-darwin-x64",
+  "version": "0.1.0",
+  "description": "xcbridge binary for macOS Intel (x64)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aptove/xcbridge.git"
+  },
+  "homepage": "https://github.com/Aptove/xcbridge#readme",
+  "keywords": [
+    "xcbridge",
+    "xcode",
+    "ios",
+    "macos",
+    "x64",
+    "intel"
+  ],
+  "files": [
+    "bin"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "preferUnplugged": true
+}

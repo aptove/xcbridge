@@ -1,0 +1,44 @@
+{
+  "name": "@aptove/xcbridge",
+  "version": "0.1.0",
+  "description": "Xcode bridge service for containerized iOS development",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aptove/xcbridge.git"
+  },
+  "homepage": "https://github.com/Aptove/xcbridge#readme",
+  "bugs": {
+    "url": "https://github.com/Aptove/xcbridge/issues"
+  },
+  "keywords": [
+    "xcode",
+    "ios",
+    "swift",
+    "development",
+    "bridge",
+    "container",
+    "docker",
+    "macos"
+  ],
+  "bin": {
+    "xcbridge": "bin/xcbridge"
+  },
+  "files": [
+    "bin",
+    "postinstall.js"
+  ],
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin"
+  ],
+  "optionalDependencies": {
+    "@aptove/xcbridge-darwin-arm64": "0.1.0",
+    "@aptove/xcbridge-darwin-x64": "0.1.0"
+  }
+}

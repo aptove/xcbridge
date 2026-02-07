@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            npm_arch: darwin-arm64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            npm_arch: darwin-x64
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binary
+        run: strip target/${{ matrix.target }}/release/xcbridge
+
+      - name: Get binary size
+        run: ls -lh target/${{ matrix.target }}/release/xcbridge
+
+      - name: Prepare npm package
+        run: |
+          mkdir -p npm/xcbridge-${{ matrix.npm_arch }}/bin
+          cp target/${{ matrix.target }}/release/xcbridge npm/xcbridge-${{ matrix.npm_arch }}/bin/
+          chmod +x npm/xcbridge-${{ matrix.npm_arch }}/bin/xcbridge
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcbridge-${{ matrix.npm_arch }}
+          path: npm/xcbridge-${{ matrix.npm_arch }}/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download darwin-arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: xcbridge-darwin-arm64
+          path: npm/xcbridge-darwin-arm64/
+
+      - name: Download darwin-x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: xcbridge-darwin-x64
+          path: npm/xcbridge-darwin-x64/
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update package versions
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          # Update main package
+          cd npm/xcbridge
+          npm version $VERSION --no-git-tag-version
+          # Update optionalDependencies versions
+          node -e "
+            const pkg = require('./package.json');
+            pkg.optionalDependencies['@aptove/xcbridge-darwin-arm64'] = '$VERSION';
+            pkg.optionalDependencies['@aptove/xcbridge-darwin-x64'] = '$VERSION';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          cd ../..
+          
+          # Update platform packages
+          cd npm/xcbridge-darwin-arm64
+          npm version $VERSION --no-git-tag-version
+          cd ../..
+          
+          cd npm/xcbridge-darwin-x64
+          npm version $VERSION --no-git-tag-version
+          cd ../..
+
+      - name: Verify packages
+        run: |
+          echo "=== Main package ==="
+          cat npm/xcbridge/package.json
+          ls -la npm/xcbridge/bin/
+          
+          echo "=== darwin-arm64 package ==="
+          cat npm/xcbridge-darwin-arm64/package.json
+          ls -la npm/xcbridge-darwin-arm64/bin/
+          
+          echo "=== darwin-x64 package ==="
+          cat npm/xcbridge-darwin-x64/package.json
+          ls -la npm/xcbridge-darwin-x64/bin/
+
+      - name: Publish @aptove/xcbridge-darwin-arm64
+        run: npm publish --access public
+        working-directory: npm/xcbridge-darwin-arm64
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @aptove/xcbridge-darwin-x64
+        run: npm publish --access public
+        working-directory: npm/xcbridge-darwin-x64
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @aptove/xcbridge
+        run: npm publish --access public
+        working-directory: npm/xcbridge
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            npm/xcbridge-darwin-arm64/bin/xcbridge
+            npm/xcbridge-darwin-x64/bin/xcbridge
+          generate_release_notes: true
